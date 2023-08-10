@@ -1,0 +1,311 @@
+<head>
+  <style>
+    #c{
+/* height:calc(222*6);
+width: calc(532*6); */
+transform: scale(1, -1);
+filter: FlipV;
+    }
+    td{
+      color: white;
+    }
+
+  </style>
+</head>
+<table>
+  <tr>
+    <td id="score"></td>
+    
+    <td id="state"></td>
+  </tr>
+</table>
+<body style="background-color: black;">
+<canvas id="c" width="1500" height="950" style="border:3px solid #333;float:left;"></canvas>
+<div style="font-weight:normal; color: #333;";>
+	<div style="float:left;padding-left:20px; min-width:300px; font-size:15px">
+		<div style="border-left-color:orange;border-left-width:3px;border-left-style:solid;padding-left:5px;" >
+			<strong>Player 3</strong><br/>
+		
+			 Name: <span id="Name2"></span><br/>
+				Level: <span id="Level2"></span><br/>
+				Collected: <span id="Collected2"></span><br/>
+        Score: <span id="Score2"></span><br/>
+				
+		</div>	
+		<br/>
+		<div style="border-left-color:blue;border-left-width:3px;border-left-style:solid;padding-left:5px;" >
+				<strong>Player 2</strong><br/>
+		
+				Name: <span id="Name1"></span><br/>
+				Level: <span id="Level1"></span><br/>
+				Collected: <span id="Collected1"></span><br/>
+        Score: <span id="Score1"></span><br/>
+
+		</div>
+		<br/>
+	</div>
+	<div style="float:left;padding-left:20px; min-width:300px; font-size:15px">
+		
+		<div style="border-left-color:purple;border-left-width:3px;border-left-style:solid;padding-left:5px;" >
+				<strong>Player 4</strong><br/>
+		
+				Name: <span id="Name3"></span><br/>
+				Level: <span id="Level3"></span><br/>
+				Collected: <span id="Collected3"></span><br/>
+        Score: <span id="Score3"></span><br/>
+		</div>
+		<br/>
+		<div style="border-left-color:red;border-left-width:3px;border-left-style:solid;padding-left:5px;" >
+			<strong>Player 1</strong><br/>
+		
+			Name: <span id="Name0"></span><br/>
+				Level: <span id="Level0"></span><br/>
+				Collected: <span id="Collected0"></span><br/>
+        Score: <span id="Score0"></span><br/>
+		</div>
+		<br/>
+	</div>
+</div>
+<div style="padding-top:10px" >
+<br/>
+	<input type="file" id="file-input" />
+	<div>
+		<input type="button" name="drawRound" onclick="clearRound();viewFirstRound();" value="First Round" />
+		<input type="button" name="drawRound" onclick="clearRound();drawRound(-1);" value="Previous Round" /><br/>
+		<input type="number" min=0 max=2500 name="GoTo" value="50" id="inGoTo"/><input type="button" name="drawRound" onclick="clearRound();GoToRound();" value="Go To Round" /><br/>
+		<input type="button" name="drawRound" onclick="clearRound();drawRound(1);" value="Next Round" />
+		<input type="button" name="drawRound" onclick="clearRound();viewLastRound();" value="Last Round" /><br/>
+	<input type="button" name="clearRound" onclick="clearRound()" value="Clear Round" />
+	<div>
+
+	<div>
+		<h3>Play</h3>
+		<label for="PlaySpeed">Speed (tps)</label> <input type="number" min=1 max=300 name="PlaySpeed" value="50" id="inSpeed"/>
+		<input type="button" name="clearRound" onclick="Play(false)" value="Play" />
+		<input type="button" name="clearRound" onclick="Pause()" value="Pause" />
+		<input type="button" name="clearRound" onclick="Play(true)" value="Play from start" />
+	</div>
+</div>
+</body>
+
+<script>
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+ // ctx.translate(canvas.width, 0);
+  //ctx.scale(6, 6);
+
+  // Start the connection.
+  let round=0;
+	let gameData;
+  var tilesize = 4
+	let pc=["fa0000","0000ff","ed6b00","4402f7"];
+	let levels = null;
+	let ix,iy;
+		
+	ctx.font = "12px Arial";
+	var playTmr;
+	var playing=false;
+	function viewFirstRound(){
+		round=0;
+		drawRound(0);
+	}
+	
+	function GoToRound(){
+	
+		let newround = document.getElementById("inGoTo").value;	
+		round = parseInt(newround);
+		drawRound(0);
+	}
+	function viewLastRound(){
+		round=gameData.length-1;
+		drawRound(0);
+	}
+	function Play(fromStart){
+		if (fromStart){
+			round=0;
+		}
+		if (!playing)	{
+			let speed = document.getElementById("inSpeed").value;
+			playTmr=setInterval(PlayTimer, (1.0/speed)*1000);
+			playing=true;
+		}
+	}
+	
+	function PlayTimer(){
+		if (round < gameData.length-1){
+			clearRound();
+			drawRound(1);
+		}
+		else{
+			window.clearInterval(playTmr)
+			playing=false;
+		}
+		
+	}
+	
+	function Pause(){
+		window.clearInterval(playTmr);
+		playing=false;
+	}
+  function drawRound(a){
+    round=round+a;
+    if (round==0){
+      levels = JSON.parse(JSON.stringify(gameData[0].Levels));
+    }
+    for (var level in gameData[round].Levels) {
+      
+      if (gameData[round].Levels[level].map != null)
+        drawmap(gameData[round].Levels[level].map, level)
+      else
+        drawchanges(gameData[round].Levels[level].ChangeLog, level);
+    };
+    for (var bot in gameData[round].Bots){
+      updatePlayer(gameData[round].Bots[bot], bot)
+    };
+  }
+
+  function clearRound(){
+		//ctx.clearRect(0, 0, c.width, c.height);
+	}
+
+function updatePlayer(player, key){
+  
+    document.getElementById("Name"+key).innerText = player.NickName ;
+    document.getElementById("Level"+key).innerText = player.CurrentLevel;
+    document.getElementById("Collected"+key).innerText = player.Hero.Collected;
+    document.getElementById("Score"+key).innerText = player.TotalPoints;
+		
+    //get previous players position from previous state
+    if (round>0)
+    {
+      let previousround = gameData[round-1];
+      let previousbotstate = previousround.Bots[key];
+      for (x = 0; x < 2; x++) {
+        for (y = 0; y < 2; y++) {
+          drawitem(previousbotstate.Hero.XPosition+x,previousbotstate.Hero.YPosition+y, levels[previousbotstate.CurrentLevel].map[previousbotstate.Hero.XPosition+x][previousbotstate.Hero.YPosition+y], previousbotstate.CurrentLevel );
+        }
+      }
+    }
+    for (x = 0; x < 2; x++) {
+        for (y = 0; y < 2; y++) {
+          drawitem(player.Hero.XPosition+x,player.Hero.YPosition+y, +key+7, player.CurrentLevel );
+      } 
+    }
+    //fix that point in the drawing
+    //draw the players new positions
+
+}
+
+function readSingleFile(e) {
+  var file = e.target.files[0];
+  if (!file) {
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var contents = e.target.result;
+    gameData=JSON.parse(contents);
+    
+	drawRound(0);
+	
+  };
+  reader.readAsText(file);
+}
+
+let mapWidth=0;
+let mapHeight=0;
+
+document.getElementById('file-input')
+  .addEventListener('change', readSingleFile, false);
+
+
+
+  function drawmap(map, level) {
+    mapWidth=map.length;
+    mapHeight=map[0].length;
+    let xoffset = (level%2)*mapWidth*tilesize+35
+        let yoffset = ~~(level/2)*mapHeight*tilesize+35;
+
+    ctx.clearRect(xoffset, yoffset, xoffset+(mapWidth*tilesize),yoffset+(mapHeight*tilesize));
+    for (y = map[0].length - 1; y >= 0; y--) {
+      for (x = 0; x < map.length; x++) {
+        drawitem(x,y,map[x][y],level);
+      }
+    }
+
+  }
+
+  function drawchanges(changes, level) {
+    var color = '#000000'
+    let alpha = 'FF'
+   
+   
+    for (var changekey in changes){      
+      let change = changes[changekey];
+      levels[level].map[change.pointX][change.pointY] = change.tileType;
+      drawitem(change.pointX,change.pointY,change.tileType,level);
+    }        
+
+  }
+
+  function drawitem(x,y,type,level){
+    let xoffset = (level%2)*mapWidth*tilesize+35;
+    let yoffset = ~~(level/2)*mapHeight*tilesize+35;
+    var color = '#000000'
+    let alpha = 'FF'
+    
+   // ctx.clearRect(xoffset, yoffset, tilesize, tilesize);
+    switch (type)
+                    {
+                        case 1://Solid
+                            // code block
+                            color = '836953'+alpha;
+                            break;
+                        case 2://Collectible
+                            // code block
+                            color = '964B00'+alpha;
+                            break;
+                        case 3://Hazard
+                            // code block
+                            color = 'FF0000'+alpha;
+                            break;
+                        case 4://Platform
+                            // code block
+                            color = '34b336'+alpha;
+                            break;
+                        case 5://Ladder
+                            // code block
+                            color = '779ecb'+alpha;
+                            break;
+                        case 6://Opponent
+                            // code block
+                            color = 'FDFD96'+alpha;
+                            break;
+                        case 7://player 1
+                            // code block
+                            color = pc[0]+alpha;
+                            break;
+                        case 8://player 2
+                        // code block
+                        color = pc[1]+alpha;
+                        break;
+                        case 9://player 3
+                        // code block
+                        color = pc[2]+alpha;
+                        break;
+                        case 10://player 4
+                            // code block
+                            color = pc[3]+alpha;
+                            break;
+                        default://air
+                            // code block
+                            color = '000000'+alpha;
+                            break;
+                    }
+        ctx.fillStyle = "#"+color
+        ctx.fillRect((x * tilesize)+xoffset, (y * tilesize)+yoffset, tilesize, tilesize)
+  }
+
+</script>
